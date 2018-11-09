@@ -24,9 +24,9 @@ def searchGoogle(name):
     
     #Acha os elementos da pagina e os coloca no dicionario
     elems = soup.select(u'div div div div div div span')
-    detailsDic = {'Artista': None, 'Álbum': None,
+    detailsDic = {'Titulo':None, 'Artista': None, 'Álbum': None,
            'Data de lançamento': None, 'Gênero': None, 
-           'Imagem': None, 'Letra': None, 'Titulo':None}
+           'Imagem': None, 'Letra': None}
     #Testa se o elemento esta no dicionario
     for elemNum in range(len(elems)):
         elem1 = elems[elemNum].getText()[:-2]
@@ -37,16 +37,19 @@ def searchGoogle(name):
             detailsDic[elem2] = elems[(elemNum + 1)].getText()
             
     #Retira o titulo da musica
-    title = name.replace(detailsDic['Artista'].lower(), '').replace('-', '')
-    #Formata o titulo
-    newTitle = ''
-    for word in title.split():
-        if len(word) > 2:
+    if detailsDic['Artista'] != None:
+        title = name.lower().replace(detailsDic['Artista'].lower(), '').replace('-', '')
+        #Formata o titulo
+        newTitle = ''
+        for word in title.split():
             newTitle += word.title() + ' '
-        else:
-            newTitle += word  + ' '
-    newTitle = newTitle[:-1]
-    detailsDic['Titulo'] = newTitle       
+        newTitle = newTitle[:-1]
+        detailsDic['Titulo'] = newTitle
+
+    #Se não achar o album, considera como single
+    if detailsDic['Álbum'] == None and detailsDic['Titulo'] != None:
+        detailsDic['Álbum'] = detailsDic['Titulo'] + ' - Single'
+    
     #Acha os sites das letras
     elems = soup.select(u'.r a')
     for elem in elems:
@@ -57,17 +60,17 @@ def searchGoogle(name):
     
     #Acha a imagem
     #Faz o download da pagina de imagens
-    album = detailsDic['Artista'] + ' ' + detailsDic['Álbum'] + r'&tbm=isch'
+    if detailsDic['Álbum'] != None or detailsDic['Artista'] != None:
+        album = detailsDic['Artista'] + ' ' + detailsDic['Álbum'] + r'&tbm=isch'
+    else:
+        album = name
     res = requests.get(getGoogle(album))
     res.raise_for_status()
     #Procura as imagens
     soup = bs4.BeautifulSoup(res.text, "html.parser")
     elems = soup.select(u'div a img')
-    imgUrl = elems[0].get('src')
-    #Salva a imagem no dicionario
-    res = requests.get(imgUrl)
-    res.raise_for_status()
-    detailsDic['Imagem'] = res.iter_content()
+    #Salva o endereço no dicionario
+    detailsDic['Imagem'] = elems[0].get('src')
         
     #Retorna o dicionario com os detalhes achados
     return(detailsDic)
@@ -97,5 +100,3 @@ def searchLetras(site):
     
     #Retorna a letra
     return letra
-        
-searchGoogle('Jim Croce Time in a bottle')
